@@ -124,6 +124,11 @@ static void WDTReset() {
     HandleFault(FeatherFault::FAULT_HUNG);
 }
 
+[[ noreturn ]] __attribute__ ((interrupt ("IRQ"))) void HardFault_Handler() {
+    // Handle fault! Hope we can still execute code
+    HandleFault(FeatherFault::FAULT_HARDFAULT);
+}
+
 void FeatherFault::Init(const FeatherFault::WDTTimeout timeout) {
     // Generic clock generator 2, divisor = 32 (2^(DIV+1))
     GCLK->GENDIV.reg = GCLK_GENDIV_ID(2) | GCLK_GENDIV_DIV(4);
@@ -199,7 +204,7 @@ void FeatherFault::PrintFault(Print& where) {
         where.println(trace->data.line);
         where.print("File: ");
         where.println(trace->data.file);
-        where.print("# of failures since upload: ");
+        where.print("Failures since upload: ");
         where.println(trace->data.failnum);
     }
     else
