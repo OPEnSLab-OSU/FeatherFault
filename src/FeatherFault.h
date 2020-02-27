@@ -38,9 +38,11 @@ namespace FeatherFault {
     void Init(const WDTTimeout timeout);
     void Mark(const int line, const char* file);
     void PrintFault(Print& where);
+    // TODO: Return the fault data as actual values, instead of just printing
 
     // For testing
     void HandleFault(const FeatherFault::FaultCause cause);
 }
 
+// TODO: Production mode to remove these values
 #define MARK { FeatherFault::Mark(__LINE__,  __SHORT_FILE__); }
