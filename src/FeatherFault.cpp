@@ -4,11 +4,16 @@
 __attribute__((__aligned__(256))) _Pragma("location=\"FLASH\"") static const uint8_t FeatherFaultFlash[256] = { 0 };
 const void* FeatherFaultFlashPtr = FeatherFaultFlash;
 
-struct FaultDataPrivate {
+/**
+ * Struct similar to FeatherFault::FaultData, but with strings to mark
+ * where data is stored in a flash dump. All properties except mark*
+ * have the same meaning as FeatherFault::FaultData.
+ */
+struct FaultDataFlashStruct {
     char marker[31] = "FeatherFault Data Here! Cause:";
     FeatherFault::FaultCause cause;
     char marker2[8] = "My Bad:";
-    uint8_t mybad;
+    uint8_t is_corrupted;
     char marker3[8] = "Fail #:";
     uint32_t failnum;
     char marker4[8] = "Line #:";
@@ -18,18 +23,18 @@ struct FaultDataPrivate {
 };
 
 typedef union {
-    struct FaultDataPrivate data;
-    uint32_t raw_u32[(sizeof(FaultDataPrivate)+3)/4]; // rounded to the nearest 4 bytes
-    uint8_t raw_u8[sizeof(FaultDataPrivate)];
-} FaultData_t;
+    struct FaultDataFlashStruct data;
+    uint32_t raw_u32[(sizeof(FaultDataFlashStruct)+3)/4]; // rounded to the nearest 4 bytes
+    uint8_t raw_u8[sizeof(FaultDataFlashStruct)];
+} FaultDataFlash_t;
 
 static const uint32_t pageSizes[] = { 8, 16, 32, 64, 128, 256, 512, 1024 };
 
-/** Global atomic bool to specify that last_line or last_file are being written to */
+/** Global atomic bool to specify that last_line or last_file are being written to, determines if a fault happened while they were being written */
 static volatile std::atomic_bool is_being_written(false);
-/** Global varible to store the last line MARKed. Do not change manually! */
+/** Global varible to store the last line MARKed, written by FeatherFault::_Mark and read by FeatherFault::HandleFault */
 static volatile int last_line = 0;
-/** Global varible to store the last filename. Do not change manually! */
+/** Global varible to store the last filename, written by FeatherFault::_Mark and read by FeatherFault::HandleFault */
 static volatile const char* last_file = "";
 
 #ifdef __arm__
@@ -51,19 +56,33 @@ static int freeMemory() {
 }
 
 /**
- * Write fault data to flash
+ * @brief Generic fault handler for FeatherFault
+ * 
+ * Performs the following steps in order:
+ * 1. Determines if the fault happened while FeatherFault was recording line information.
+ * If so, the information could be corrupted, so we don't record it to prevent faulting
+ * again. If the fault happened any other time, get the line information from our global
+ * varibles last_line and last_file.
+ * 2. Write the data we just recorded and the fault cause to flash, at the address pointed 
+ * to by FeatherFaultFlash. In order to do this, we must first erase the flash (not sure why), 
+ * then write to it. Most of the code for this is ensuring that all flash operations are 
+ * page aligned.
+ * 3. Reset the system using NVIC_SystemReset.
+ * 
+ * @param cause The reason HandleFault was called (should not be FAULT_NONE).
+ * @return This function does not return.
  */
-[[ noreturn ]] void FeatherFault::HandleFault(const FeatherFault::FaultCause cause) {
+[[ noreturn ]] static void HandleFault(const FeatherFault::FaultCause cause) {
     // TODO: read the stack?
     // Create a fault data object, and populate it
-    FaultData_t trace = { {} };
+    FaultDataFlash_t trace = { {} };
     // check if FeatherFault may have been the cause (oops)
-    trace.data.mybad = is_being_written.load() ? 1 : 0;
+    trace.data.is_corrupted = is_being_written.load() ? 1 : 0;
     // write cause, line, and file info
     trace.data.cause = cause;
     trace.data.line = last_line;
     // if the pointer was being written and we interrupted it, we don't want to make things worse
-    if (!trace.data.mybad) {
+    if (!trace.data.is_corrupted) {
         const volatile char* index = last_file;
         uint32_t i = 0;
         for (; i < sizeof(trace.data.file) - 1 && *index != '\0'; i++)
@@ -73,7 +92,7 @@ static int freeMemory() {
     else 
         trace.data.file[0] = '\0'; // Corrupted!
     // read the failure number from flash, and write it + 1
-    trace.data.failnum = ((FaultData_t*)FeatherFaultFlashPtr)->data.failnum + 1;
+    trace.data.failnum = ((FaultDataFlash_t*)FeatherFaultFlashPtr)->data.failnum + 1;
     // Write that fault data object to flash
     volatile uint32_t* flash_u32 = (volatile uint32_t*)FeatherFaultFlashPtr;
     volatile uint8_t* const flash_u8 = (volatile uint8_t*)FeatherFaultFlashPtr;
@@ -115,21 +134,21 @@ static void WDTReset() {
     WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY;
 }
 
-/**
- * @brief WDT Handler, saves the last state to flash before the board is reset.
- */
+/** WDT Handler, calls HandleFault(FeatherFault::FAULT_HUNG) */
 [[ noreturn ]] __attribute__ ((interrupt ("IRQ"))) void WDT_Handler() {
     WDT->INTFLAG.bit.EW  = 1;        // Clear interrupt flag
     // Handle fault!
     HandleFault(FeatherFault::FAULT_HUNG);
 }
 
+/** HardFault Handler, calls HandleFault(FeatherFault::FAULT_HARDFAULT) */
 [[ noreturn ]] __attribute__ ((interrupt ("IRQ"))) void HardFault_Handler() {
     // Handle fault! Hope we can still execute code
     HandleFault(FeatherFault::FAULT_HARDFAULT);
 }
 
-void FeatherFault::Init(const FeatherFault::WDTTimeout timeout) {
+/* See FeatherFault.h */
+void FeatherFault::StartWDT(const FeatherFault::WDTTimeout timeout) {
     // Generic clock generator 2, divisor = 32 (2^(DIV+1))
     GCLK->GENDIV.reg = GCLK_GENDIV_ID(2) | GCLK_GENDIV_DIV(4);
     // Enable clock generator 2 using low-power 32KHz oscillator.
@@ -168,10 +187,8 @@ void FeatherFault::Init(const FeatherFault::WDTTimeout timeout) {
     while(WDT->STATUS.bit.SYNCBUSY);
 }
 
-/**
- * @brief Save a location in the file, and reset the watchdog timer
- */
-void FeatherFault::Mark(const int line, const char* file) {
+/* See FeatherFault.h */
+void FeatherFault::_Mark(const int line, const char* file) {
     WDTReset();
     is_being_written.store(true);
     last_line = line;
@@ -180,26 +197,24 @@ void FeatherFault::Mark(const int line, const char* file) {
     // check for a stackoverflow
     const int mem = freeMemory();
     if (mem < 0 || mem > 60000)
-        HandleFault(FeatherFault::FAULT_STACKOVERFLOW);
+        HandleFault(FeatherFault::FAULT_OUTOFMEMORY);
 }
 
-/**
- * @brief Print information on the fault to somewhere
- */
+/* See FeatherFault.h */
 void FeatherFault::PrintFault(Print& where) {
     // Load the fault data from flash
-    const FaultData_t* trace = (FaultData_t*)FeatherFaultFlashPtr;
+    const FaultDataFlash_t* trace = (FaultDataFlash_t*)FeatherFaultFlashPtr;
     // print it the printer
     if (trace->data.cause != FeatherFault::FAULT_NONE) {
         where.print("Fault! Cause: ");
         switch (trace->data.cause) {
             case FeatherFault::FAULT_HUNG: where.println("HUNG"); break;
             case FeatherFault::FAULT_HARDFAULT: where.println("HARDFAULT"); break;
-            case FeatherFault::FAULT_STACKOVERFLOW: where.println("STACKOVERFLOW"); break;
+            case FeatherFault::FAULT_OUTOFMEMORY: where.println("OUTOFMEMORY"); break;
             default: where.println("Corrupted");
         }
-        where.print("FeatherFault's error: ");
-        where.println(trace->data.mybad ? "Yes" : "No");
+        where.print("Fault during recording: ");
+        where.println(trace->data.is_corrupted ? "Yes" : "No");
         where.print("Line: ");
         where.println(trace->data.line);
         where.print("File: ");
@@ -209,4 +224,25 @@ void FeatherFault::PrintFault(Print& where) {
     }
     else
         where.println("No fault");
+}
+
+/* See FeatherFault.h */
+bool FeatherFault::DidFault() {
+    // Load the fault data from flash
+    const FaultDataFlash_t* trace = (FaultDataFlash_t*)FeatherFaultFlashPtr;
+    return trace->data.cause != FeatherFault::FAULT_NONE;
+}
+
+/* See FeatherFault.h */
+FeatherFault::FaultData FeatherFault::GetFault() {
+    // Load the fault data from flash
+    const FaultDataFlash_t* trace = (FaultDataFlash_t*)FeatherFaultFlashPtr;
+    // copy all relavent data
+    FaultData ret;
+    ret.cause = trace->data.cause;
+    ret.is_corrupted = trace->data.is_corrupted;
+    ret.failnum = trace->data.failnum;
+    ret.line = trace->data.line;
+    memcpy(ret.file, trace->data.file, sizeof(ret.file));
+    return ret;
 }

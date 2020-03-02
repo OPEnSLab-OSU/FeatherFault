@@ -9,7 +9,7 @@ void setup() {
   while(!Serial);
   FeatherFault::PrintFault(Serial);
   Serial.flush();
-  FeatherFault::Init(FeatherFault::WDTTimeout::WDT_8S); MARK;
+  FeatherFault::StartWDT(FeatherFault::WDTTimeout::WDT_8S); MARK;
 }
 
 void loop() {

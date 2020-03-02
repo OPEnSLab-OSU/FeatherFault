@@ -7,7 +7,7 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
   while(!Serial);
-  FeatherFault::Init(FeatherFault::WDTTimeout::WDT_8S); MARK;
+  FeatherFault::StartWDT(FeatherFault::WDTTimeout::WDT_8S); MARK;
   FeatherFault::PrintFault(Serial); MARK;
   Serial.flush(); MARK;
 }
