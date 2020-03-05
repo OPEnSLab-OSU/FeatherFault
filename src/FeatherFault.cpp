@@ -15,11 +15,11 @@ const void* FeatherFaultFlashPtr = FeatherFaultFlash;
 struct alignas(uint32_t) FaultDataFlashStruct {
     uint32_t value_head = 0xFEFEFAFA;
     char marker[32] = "FeatherFault Data Here! Caused:";
-    uint32_t cause;
+    uint32_t cause; // FeatherFaultFlashStruct + 36
     char marker2[8] = "My Bad:";
-    uint32_t is_corrupted;
+    uint32_t is_corrupted; // FeatherFaultFlashStruct + 48
     char marker3[8] = "Fail #:";
-    uint32_t failnum;
+    uint32_t failnum; // 
     char marker4[8] = "Line #:";
     int32_t line;
     char marker5[8] = "File n:";

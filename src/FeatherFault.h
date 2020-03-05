@@ -17,11 +17,11 @@ namespace FeatherFault {
     enum FaultCause : uint32_t {
         FAULT_NONE = 0,
         /** The watchdog was triggered */
-        FAULT_HUNG,
+        FAULT_HUNG = 1,
         /** An invalid instruction was executed, or an invalid memory address was accessed */
-        FAULT_HARDFAULT,
+        FAULT_HARDFAULT = 2,
         /** The heap has crossed into the stack, and the memory is corrupted (see https://learn.adafruit.com/memories-of-an-arduino?view=all) */
-        FAULT_OUTOFMEMORY
+        FAULT_OUTOFMEMORY = 3
     };
 
     enum class WDTTimeout : uint8_t {
