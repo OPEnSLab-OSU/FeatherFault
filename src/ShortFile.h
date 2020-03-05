@@ -19,5 +19,6 @@ namespace _ShortFilePrivate {
 
 }
 
+
 /** Use this macro to get the filename of the current file */
 #define __SHORT_FILE__ ({constexpr const char* const sf__ {_ShortFilePrivate::past_last_slash(__FILE__)}; sf__;})
