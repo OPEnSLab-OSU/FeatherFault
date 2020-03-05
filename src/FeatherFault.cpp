@@ -1,31 +1,35 @@
 #include "FeatherFault.h"
 
 /** Allocate 512 bytes in flash for our crash logs */
-__attribute__((__aligned__(256))) _Pragma("location=\"FLASH\"") static const uint8_t FeatherFaultFlash[256] = { 0 };
+alignas(256) _Pragma("location=\"FLASH\"") static const uint8_t FeatherFaultFlash[256] = { 0 };
 const void* FeatherFaultFlashPtr = FeatherFaultFlash;
 
 /**
  * Struct similar to FeatherFault::FaultData, but with strings to mark
  * where data is stored in a flash dump. All properties except mark*
  * have the same meaning as FeatherFault::FaultData.
+ * 
+ * Please ensure that all values in this struct are word (4-byte) aligned, to
+ * prevent decoding issues when reading directly from flash.
  */
-struct FaultDataFlashStruct {
-    char marker[31] = "FeatherFault Data Here! Cause:";
-    FeatherFault::FaultCause cause;
+struct alignas(uint32_t) FaultDataFlashStruct {
+    uint32_t value_head = 0xFEFEFAFA;
+    char marker[32] = "FeatherFault Data Here! Caused:";
+    uint32_t cause;
     char marker2[8] = "My Bad:";
-    uint8_t is_corrupted;
+    uint32_t is_corrupted;
     char marker3[8] = "Fail #:";
     uint32_t failnum;
     char marker4[8] = "Line #:";
     int32_t line;
-    char marker5[6] = "File:";
-    char file[64]; // may be corrupted if mybad is true
+    char marker5[8] = "File n:";
+    char file[64]; // may be corrupted if is_corrupted is true
 };
 
 typedef union {
     struct FaultDataFlashStruct data;
-    uint32_t raw_u32[(sizeof(FaultDataFlashStruct)+3)/4]; // rounded to the nearest 4 bytes
-    uint8_t raw_u8[sizeof(FaultDataFlashStruct)];
+    uint32_t alignas(FaultDataFlashStruct) raw_u32[(sizeof(FaultDataFlashStruct)+3)/4]; // rounded to the nearest 4 bytes
+    uint8_t alignas(FaultDataFlashStruct) raw_u8[sizeof(FaultDataFlashStruct)];
 } FaultDataFlash_t;
 
 static const uint32_t pageSizes[] = { 8, 16, 32, 64, 128, 256, 512, 1024 };
@@ -79,7 +83,7 @@ static int freeMemory() {
     // check if FeatherFault may have been the cause (oops)
     trace.data.is_corrupted = is_being_written.load() ? 1 : 0;
     // write cause, line, and file info
-    trace.data.cause = cause;
+    trace.data.cause = static_cast<uint32_t>(cause);
     trace.data.line = last_line;
     // if the pointer was being written and we interrupted it, we don't want to make things worse
     if (!trace.data.is_corrupted) {
@@ -187,6 +191,12 @@ void FeatherFault::StartWDT(const FeatherFault::WDTTimeout timeout) {
     while(WDT->STATUS.bit.SYNCBUSY);
 }
 
+void FeatherFault::StopWDT() {
+    // stop the watchdog
+    WDT->CTRL.bit.ENABLE = 0;            
+    while(WDT->STATUS.bit.SYNCBUSY);
+}
+
 /* See FeatherFault.h */
 void FeatherFault::_Mark(const int line, const char* file) {
     WDTReset();
@@ -239,7 +249,7 @@ FeatherFault::FaultData FeatherFault::GetFault() {
     const FaultDataFlash_t* trace = (FaultDataFlash_t*)FeatherFaultFlashPtr;
     // copy all relavent data
     FaultData ret;
-    ret.cause = trace->data.cause;
+    ret.cause = static_cast<FeatherFault::FaultCause>(trace->data.cause);
     ret.is_corrupted = trace->data.is_corrupted;
     ret.failnum = trace->data.failnum;
     ret.line = trace->data.line;

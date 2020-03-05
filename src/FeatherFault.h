@@ -14,7 +14,7 @@
 
 namespace FeatherFault {
     /** Enumeration for possible causes for fault */
-    enum FaultCause : uint8_t {
+    enum FaultCause : uint32_t {
         FAULT_NONE = 0,
         /** The watchdog was triggered */
         FAULT_HUNG,
@@ -68,6 +68,16 @@ namespace FeatherFault {
      * @param timeout Timeout to use for the WDT.
      */
     void StartWDT(const WDTTimeout timeout);
+
+    /**
+     * Stop the watchdog timer. Use this fuction if you are planning
+     * on sleeping or performing an extended task in which you do
+     * not want the watchdog timer to interrupt.
+     * 
+     * In order for the watchdog to function after this function
+     * is called, you must start it again with FeatherFault::StartWDT.
+     */
+    void StopWDT();
 
     /**
      * Prints information about the fault to a print stream (such as the
