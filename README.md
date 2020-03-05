@@ -109,7 +109,7 @@ Hard Fault detection is impended using the existing hard fault interrupt vector 
 
 ### Getting Fault Data In Your Sketch
 
-While most projects should only need traces on the serial monitor, some (such as remote deployments) will need to log the data to other mediums. To do this, FeatherFault has the `FeatherFault::DidFault` and `FeatherFault::GetFault` functions to check if a fault has occurred, and to get the last fault trace. For more information on these functions, please see [FeatherFault.h](./src/FeatherFault.h)
+While most projects should only need traces on the serial monitor, some (such as remote deployments) will need to log the data to other mediums. To do this, FeatherFault has the `FeatherFault::DidFault` and `FeatherFault::GetFault` functions to check if a fault has occurred, and to get the last fault trace. For more information on these functions, please see [FeatherFault.h](./src/FeatherFault.h).
 
 ### Getting Fault Data Without Serial
 
