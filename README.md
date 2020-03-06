@@ -17,25 +17,34 @@ void setup() {
     ...
 }
 ```
-and decorating your code with `MARK` statements, making sure to place them close together in suspicious code sections (no more than once per line):
+and decorating your code with `MARK` statements, making sure to surround suspicious code sections with them. `MARK` may not be used more than once per line, and must be used both before and after the suspected code:
 ```C++
 void loop() {
+    // Mark a function
+    MARK; 
+    do_something_suspicous(); 
     MARK;
-    do_something_suspicous(); MARK;
-    while (unsafe_string_function() == true) {  MARK;
+
+    // Mark a loop
+    MARK;
+    while (unsafe_function_one() == true) { MARK;
+        // Ignore safe functions, but mark the unsafe ones
+        // Which functions are 'unsafe' is up to the programmer
         safe_function_one();
         safe_function_two();
-        safe_function_three(); MARK;
-        unsafe_function_one(); MARK;
+        safe_function_three();
+        MARK;
+        unsafe_function_two();
+        MARK;
     }
 }
 ```
 
-Once FeatherFault is activated, it will trigger on a time length of inactivity (we specify 8 seconds above, but you can change the value if you like), [memory overflow](https://learn.adafruit.com/memories-of-an-arduino?view=all), or a [hard fault](https://www.freertos.org/Debugging-Hard-Faults-On-Cortex-M-Microcontrollers.html). Once triggered, FeatherFault will immediately save the the location of the last run `MARK` statement along with the fault cause, and reset the board. This saved data can then be read by `FeatherFault::PrintFault` and `FeatherFault::GetFault`, allowing the developer to determine if the board has failed after it resets.
+Once FeatherFault is activated, it will trigger after a set time of inactivity (we specify 8 seconds above, but you can change the value if you like), on [memory overflow](https://learn.adafruit.com/memories-of-an-arduino?view=all), or on a [hard fault](https://www.freertos.org/Debugging-Hard-Faults-On-Cortex-M-Microcontrollers.html). Once triggered, FeatherFault will immediately save the location of the last run `MARK` statement along with the fault cause, and reset the board. This saved data can then be read by `FeatherFault::PrintFault` and `FeatherFault::GetFault`, allowing the developer to determine if the board has failed after it resets.
 
 ### Usage Example
 
-To show how this behavior works, lets assume that `unsafe_function()` in the code block below attempts to access memory that doesn't exist, causing a hard fault:
+To show how this behavior works, let's assume that `unsafe_function()` in the code block below attempts to access memory that doesn't exist, causing a hard fault:
 ```C++
 void setup() {
     // Activate featherfault
@@ -56,7 +65,7 @@ Start!
 ```
 After which the device hard faults, causing it to wait in an infinite loop until it is reset. 
 
-This behavior is extremely difficult to troubleshoot: as the developer, all we know is that the device failed between `Start!` and `Done`. Using more print statements, we could eventually narrow down the cause to `unsafe_function`---this process is time consuming, unreliable, and downright annoying. Instead, let's try the same code with FeatherFault activated:
+This behavior is extremely difficult to troubleshoot: as the developer, all we know is that the device failed between `Start!` and `Done`. Using more print statements, we could eventually narrow down the cause to `unsafe_function`—this process is time consuming, unreliable, and downright annoying. Instead, let's try the same code with FeatherFault activated:
 ```C++
 void setup() {
     // Wait for serial to connect to the serial monitor
@@ -66,11 +75,17 @@ void setup() {
     FeatherFault::PrintFault(Serial);
     FeatherFault::StartWDT(FeatherFault::WDTTimeout::WDT_8S);
     // begin code
-    Serial.println("Start!"); MARK;
-    other_function_one(); MARK;
-    unsafe_function(); MARK; // oops
-    other_function_two(); MARK;
-    Serial.println("Done!"); MARK;
+    MARK;
+    Serial.println("Start!");
+    MARK;
+    other_function_one();
+    MARK;
+    unsafe_function(); // oops
+    MARK;
+    other_function_two();
+    MARK;
+    Serial.println("Done!");
+    MARK;
 }
 ```
 Running that sketch, we would see the following serial monitor output:
@@ -93,7 +108,7 @@ Since the FeatherFault was triggered by the hard fault, `FeatherFault::PrintFaul
 
 ### Failure Modes
 
-FeatherFault currently handles three failure modes: hanging, [memory overflow](https://learn.adafruit.com/memories-of-an-arduino?view=all), and [hard fault](https://www.freertos.org/Debugging-Hard-Faults-On-Cortex-M-Microcontrollers.html).
+FeatherFault currently handles three failure modes: hanging, [memory overflow](https://learn.adafruit.com/memories-of-an-arduino?view=all), and [hard fault](https://www.freertos.org/Debugging-Hard-Faults-On-Cortex-M-Microcontrollers.html). When any of these failure modes are triggered, FeatherFault will immediately write the information from the last `MARK` to flash memory, and cause a system reset. `FeatherFault::PrintFault`, `FeatherFault::GetFault`, and `FeatherFault::DidFault` read this flash memory to retrieve information regarding the last fault.
 
 #### Hanging Detection
 
@@ -105,7 +120,7 @@ Memory overflow detection is implemented by checking the top of the heap against
 
 #### Hard Fault Detection
 
-Hard Fault detection is impended using the existing hard fault interrupt vector built into ARM. This interrupt is normally [defined as a infinite loop](https://github.com/adafruit/ArduinoCore-samd/blob/bf24e95f7ef7b41201d4389ef47b858b14ca58dd/cores/arduino/cortex_handlers.c#L43), however FeatherFault overrides this handler to allow for tracing and a graceful recovery. This feature is activated when the library is included in your sketch.
+Hard Fault detection is implemented using the existing hard fault interrupt vector built into ARM. This interrupt is normally [defined as a infinite loop](https://github.com/adafruit/ArduinoCore-samd/blob/bf24e95f7ef7b41201d4389ef47b858b14ca58dd/cores/arduino/cortex_handlers.c#L43), however FeatherFault overrides this handler to allow for tracing and a graceful recovery. This feature is activated when the library is included in your sketch.
 
 ### Getting Fault Data In Your Sketch
 
