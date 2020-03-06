@@ -24,6 +24,8 @@ before_install:
   - mkdir -p $HOME/Arduino/libraries
   - rm -rf $HOME/Arduino/libraries/Adafruit_ASFcore
   - git clone https://github.com/adafruit/Adafruit_ASFcore $HOME/Arduino/libraries/Adafruit_ASFcore
+install:
+  - ln -s $PWD $HOME/Arduino/libraries/.
 script:
   - arduino-cli compile --verbose --warnings all --fqbn $BOARD_ONE $PWD/examples/$EXAMPLE
   - arduino-cli compile --verbose --warnings all --fqbn $BOARD_TWO $PWD/examples/$EXAMPLE
