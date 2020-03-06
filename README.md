@@ -1,5 +1,7 @@
 # 🔬FeatherFault
 
+[![Build Status](https://travis-ci.org/OPEnSLab-OSU/FeatherFault.svg?branch=master)](https://travis-ci.org/OPEnSLab-OSU/FeatherFault)
+
 When a microcontroller crashes or hangs, it can be quite difficult to troubleshoot what caused it. FeatherFault is an attempt to build a system that can not only recover from a crash, but explain why the crash happened. FeatherFault supports all boards using the SAMD21 (Adafruit Feather M0, Arduino Zero, etc.), and future support is planned for the SAMD51.
 
 ## Getting Started

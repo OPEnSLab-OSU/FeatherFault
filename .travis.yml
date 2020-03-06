@@ -1,0 +1,29 @@
+language: c
+env:
+  global:
+     # You can uncomment this to explicitly choose an (old) version of the Arduino IDE
+     #- ARDUINO_IDE_VERSION="1.8.7"
+    - ADDITIONAL_URLS="https://adafruit.github.io/arduino-board-index/package_adafruit_index.json"
+    - BOARD_ONE="adafruit:samd:adafruit_feather_m0"
+    - BOARD_TWO="arduino:samd:mzero_bl"
+  jobs:
+    - EXAMPLE=Hang
+    - EXAMPLE=HardFault
+    - EXAMPLE=StackOverflow
+
+cache:
+  directories:
+    - ~/arduino_ide
+    - ~/.arduino15/packages/
+
+before_install:
+  - curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | BINDIR=/usr/bin sudo sh
+  - arduino-cli core update-index --additional-urls $ADDITIONAL_URLS
+  - arduino-cli core install arduino:samd -v
+  - arduino-cli core install adafruit:samd -v --additional-urls $ADDITIONAL_URLS
+  - mkdir -p $HOME/Arduino/libraries
+  - rm -rf $HOME/Arduino/libraries/Adafruit_ASFcore
+  - git clone https://github.com/adafruit/Adafruit_ASFcore $HOME/Arduino/libraries/Adafruit_ASFcore
+script:
+  - arduino-cli compile --verbose --warnings all --fqbn $BOARD_ONE $PWD/examples/$EXAMPLE
+  - arduino-cli compile --verbose --warnings all --fqbn $BOARD_TWO $PWD/examples/$EXAMPLE
