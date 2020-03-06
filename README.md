@@ -1,6 +1,6 @@
 # 🔬FeatherFault
 
-When a microcontroller crashes or hangs, it can be quite difficult to troubleshoot what caused it. FeatherFault is an attempt to build a system that can not only recover from a crash, but tell you why the crash happened. FeatherFault supports all boards using the SAMD21 (Adafruit Feather M0, Arduino Zero, etc.), and future support is planned for the SAMD51.
+When a microcontroller crashes or hangs, it can be quite difficult to troubleshoot what caused it. FeatherFault is an attempt to build a system that can not only recover from a crash, b   ut tell you why the crash happened. FeatherFault supports all boards using the SAMD21 (Adafruit Feather M0, Arduino Zero, etc.), and future support is planned for the SAMD51.
 
 ## Getting Started
 
@@ -25,17 +25,17 @@ void loop() {
     while (unsafe_string_function() == true) {  MARK;
         safe_function_one();
         safe_function_two();
-        safe_function_three(); MARK;
+        safe_function_three();
         unsafe_function_one(); MARK;
     }
 }
 ```
 
-Once FeatherFault is activated, it will trigger on a time length of inactivity (we specify 8 seconds above, but you can change the value if you like), [memory overflow](https://learn.adafruit.com/memories-of-an-arduino?view=all), or a [hard fault](https://www.freertos.org/Debugging-Hard-Faults-On-Cortex-M-Microcontrollers.html). Once triggered, FeatherFault will immediately save the the location of the last run `MARK` statement along with the fault cause, and reset the board. This saved data can then be read by `FeatherFault::PrintFault` and `FeatherFault::GetFault`, allowing the developer to determine if the board has failed after it resets.
+Once FeatherFault is activated, it will trigger after a set time of inactivity (we specify 8 seconds above, but you can change the value if you like), on [memory overflow](https://learn.adafruit.com/memories-of-an-arduino?view=all), or on a [hard fault](https://www.freertos.org/Debugging-Hard-Faults-On-Cortex-M-Microcontrollers.html). Once triggered, FeatherFault will immediately save the location of the last run `MARK` statement along with the fault cause, and reset the board. This saved data can then be read by `FeatherFault::PrintFault` and `FeatherFault::GetFault`, allowing the developer to determine if the board has failed after it resets.
 
 ### Usage Example
 
-To show how this behavior works, lets assume that `unsafe_function()` in the code block below attempts to access memory that doesn't exist, causing a hard fault:
+To show how this behavior works, let's assume that `unsafe_function()` in the code block below attempts to access memory that doesn't exist, causing a hard fault:
 ```C++
 void setup() {
     // Activate featherfault
@@ -105,7 +105,7 @@ Memory overflow detection is implemented by checking the top of the heap against
 
 #### Hard Fault Detection
 
-Hard Fault detection is impended using the existing hard fault interrupt vector built into ARM. This interrupt is normally [defined as a infinite loop](https://github.com/adafruit/ArduinoCore-samd/blob/bf24e95f7ef7b41201d4389ef47b858b14ca58dd/cores/arduino/cortex_handlers.c#L43), however FeatherFault overrides this handler to allow for tracing and a graceful recovery. This feature is activated when the library is included in your sketch.
+Hard Fault detection is implemented using the existing hard fault interrupt vector built into ARM. This interrupt is normally [defined as a infinite loop](https://github.com/adafruit/ArduinoCore-samd/blob/bf24e95f7ef7b41201d4389ef47b858b14ca58dd/cores/arduino/cortex_handlers.c#L43), however FeatherFault overrides this handler to allow for tracing and a graceful recovery. This feature is activated when the library is included in your sketch.
 
 ### Getting Fault Data In Your Sketch
 
