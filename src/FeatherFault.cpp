@@ -36,10 +36,12 @@ static const uint32_t pageSizes[] = { 8, 16, 32, 64, 128, 256, 512, 1024 };
 
 /** Global atomic bool to specify that last_line or last_file are being written to, determines if a fault happened while they were being written */
 static volatile std::atomic_bool is_being_written(false);
-/** Global varible to store the last line MARKed, written by FeatherFault::_Mark and read by FeatherFault::HandleFault */
+/** Global variable to store the last line MARKed, written by FeatherFault::_Mark and read by FeatherFault::HandleFault */
 static volatile int last_line = 0;
-/** Global varible to store the last filename, written by FeatherFault::_Mark and read by FeatherFault::HandleFault */
+/** Global variable to store the last filename, written by FeatherFault::_Mark and read by FeatherFault::HandleFault */
 static volatile const char* last_file = "";
+/** Global variable to store function pointer we would like to call during the watchdog, if any */
+static volatile void(*callback_ptr)() = nullptr;
 
 #ifdef __arm__
 // should use uinstd.h to define sbrk but Due causes a conflict
@@ -128,6 +130,9 @@ static int freeMemory() {
         NVMCTRL->CTRLA.reg = NVMCTRL_CTRLA_CMDEX_KEY | NVMCTRL_CTRLA_CMD_WP;
         while (NVMCTRL->INTFLAG.bit.READY == 0) { }
     }
+    // call the callback function if one is registered
+    if (callback_ptr != nullptr)
+        callback_ptr();
     // All done! the chip will now reset
     NVIC_SystemReset();
     while(true);
@@ -191,10 +196,17 @@ void FeatherFault::StartWDT(const FeatherFault::WDTTimeout timeout) {
     while(WDT->STATUS.bit.SYNCBUSY);
 }
 
+
+/* See FeatherFault.h */
 void FeatherFault::StopWDT() {
     // stop the watchdog
     WDT->CTRL.bit.ENABLE = 0;            
     while(WDT->STATUS.bit.SYNCBUSY);
+}
+
+/* See FeatherFault.h */
+void FeatherFault::SetCallback(volatile void(*callback)()) {
+    callback_ptr = callback;
 }
 
 /* See FeatherFault.h */

@@ -78,6 +78,18 @@ namespace FeatherFault {
      * is called, you must start it again with FeatherFault::StartWDT.
      */
     void StopWDT();
+    
+    /**
+     * Set a callback function to be called whenever FeatherFault triggered.
+     * This function should be a volatile void function.
+     * 
+     * Please note that this function MUST be reentrent, and MUST NOT 
+     * cause a fault itself, othwise breaking things even further. 
+     * Be careful!
+     * 
+     * @param callback function to call on fault, nullptr if none
+     */
+    void SetCallback(volatile void(*callback)());
 
     /**
      * Prints information about the fault to a print stream (such as the
