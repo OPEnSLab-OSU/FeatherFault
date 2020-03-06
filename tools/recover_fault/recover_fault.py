@@ -11,7 +11,9 @@
 #   Python 3.x - Available on windows, linux and mac. See https://realpython.com/installing-python/
 #   click - Install with 'sudo pip3 install click' (omit sudo on windows)
 #   pyserial - Install with 'sudo pip3 install pyserial' (omit sudo on windows)
-#   bossac - Should be already included as 'bossac.exe' in the same directory as this file.
+#   bossac - You will need to install BOSSA (https://www.shumatech.com/web/products/bossa), and locate
+#       bossac from the installation (In windows: C:\Program Files (x86)\BOSSA\bossac.exe). From there, you 
+#       can either copy the binary into the same directory as this script, or add the BOSSA folder to your path.
 
 import click
 import time
@@ -23,6 +25,7 @@ import mmap
 import struct
 from collections import namedtuple
 import os
+import shutil
 
 # These values are specific to the Adafruit Feather M0 USB configuration
 PID_SKETCH = 32779
@@ -64,7 +67,7 @@ def reset_board_bootloader(address):
 
 def download_board_flash(port, bossac, tmpfilepath):
     # run BOSSAC, telling it to read from our specified port into our specified file!
-    ret = subprocess.run([bossac, f'--port={ port }', '--force_usb_port=true', '-r', tmpfilepath])
+    ret = subprocess.run([bossac, f'--port={ port }', '--offset=0x2000', '-r', tmpfilepath])
     if ret.returncode == 0:
         return True
     else:
@@ -137,8 +140,8 @@ def reset_board(attempt_count, attempt_wait, force, port):
 @recover_fault.command(short_help='Extract FeatherFault trace data from a Feather M0 in bootloader mode')
 @click.option('--force', '-f', is_flag=True,
     help='Disable all checks that the COM port is valid (not recommended)') 
-@click.option('--bossac-path', '-u', type=click.Path(exists=True, dir_okay=False), default="./bossac.exe",
-              help='Location of the BOSSA uploader tool to use')
+@click.option('--bossac-path', '-u', type=click.Path(dir_okay=False), default=None,
+              help='Location of the BOSSAC uploader tool, see installation instructions for more information.')
 @click.option('--bin-path', '-b', type=click.Path(dir_okay=False), default='./flash.bin',
     help='Location to place temporarily place the flash data')
 @click.argument('port')
@@ -147,9 +150,18 @@ def recover(force, bossac_path, bin_path, port):
     Uses BOSSAC to extract FeatherFault data from the flash memory of a Feather M0
     in bootloader mode. The first argument specifies the COM port to extract from.
 
-    Note that --bossac-path must point to the version of BOSSAC used by the
-    Arduino SAMD core, and cannot be downloaded from the BOSSAC website.
+    Note that --bossac-path must point to a valid BOSSAC executable, see the installation
+    instructions for more infomation on how to install BOSSA.
     """
+    # check that BOSSAC exists
+    if bossac_path == None:
+        bossac_path = shutil.which('bossac')
+        if bossac_path == None:
+            click.echo(f'Failed to find bossac executable, did you install BOSSA?', err=True)
+            exit(1)
+    elif not os.path.isfile(bossac_path):
+        click.echo('Invalid bossac path specified')
+        exit(1)
     # test that the COM port exists, and has a device on it
     if force == False:
         ports = get_feather_serial_ports(f'^{ port }$')
