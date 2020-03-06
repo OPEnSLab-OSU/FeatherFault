@@ -1,6 +1,6 @@
 # 🔬FeatherFault
 
-When a microcontroller crashes or hangs, it can be quite difficult to troubleshoot what caused it. FeatherFault is an attempt to build a system that can not only recover from a crash, b   ut tell you why the crash happened. FeatherFault supports all boards using the SAMD21 (Adafruit Feather M0, Arduino Zero, etc.), and future support is planned for the SAMD51.
+When a microcontroller crashes or hangs, it can be quite difficult to troubleshoot what caused it. FeatherFault is an attempt to build a system that can not only recover from a crash, but tell you why the crash happened. FeatherFault supports all boards using the SAMD21 (Adafruit Feather M0, Arduino Zero, etc.), and future support is planned for the SAMD51.
 
 ## Getting Started
 
@@ -17,16 +17,25 @@ void setup() {
     ...
 }
 ```
-and decorating your code with `MARK` statements, making sure to place them close together in suspicious code sections (no more than once per line):
+and decorating your code with `MARK` statements, making sure to surround suspicious code sections with them. `MARK` may not be used more than once per line, and must be used both before and after the suspected code:
 ```C++
 void loop() {
+    // Mark a function
+    MARK; 
+    do_something_suspicous(); 
     MARK;
-    do_something_suspicous(); MARK;
-    while (unsafe_string_function() == true) {  MARK;
+
+    // Mark a loop
+    MARK;
+    while (unsafe_function_one() == true) { MARK;
+        // Ignore safe functions, but mark the unsafe ones
+        // Which functions are 'unsafe' is up to the programmer
         safe_function_one();
         safe_function_two();
         safe_function_three();
-        unsafe_function_one(); MARK;
+        MARK;
+        unsafe_function_two();
+        MARK;
     }
 }
 ```
@@ -56,7 +65,7 @@ Start!
 ```
 After which the device hard faults, causing it to wait in an infinite loop until it is reset. 
 
-This behavior is extremely difficult to troubleshoot: as the developer, all we know is that the device failed between `Start!` and `Done`. Using more print statements, we could eventually narrow down the cause to `unsafe_function`---this process is time consuming, unreliable, and downright annoying. Instead, let's try the same code with FeatherFault activated:
+This behavior is extremely difficult to troubleshoot: as the developer, all we know is that the device failed between `Start!` and `Done`. Using more print statements, we could eventually narrow down the cause to `unsafe_function`—this process is time consuming, unreliable, and downright annoying. Instead, let's try the same code with FeatherFault activated:
 ```C++
 void setup() {
     // Wait for serial to connect to the serial monitor
@@ -66,11 +75,17 @@ void setup() {
     FeatherFault::PrintFault(Serial);
     FeatherFault::StartWDT(FeatherFault::WDTTimeout::WDT_8S);
     // begin code
-    Serial.println("Start!"); MARK;
-    other_function_one(); MARK;
-    unsafe_function(); MARK; // oops
-    other_function_two(); MARK;
-    Serial.println("Done!"); MARK;
+    MARK;
+    Serial.println("Start!");
+    MARK;
+    other_function_one();
+    MARK;
+    unsafe_function(); // oops
+    MARK;
+    other_function_two();
+    MARK;
+    Serial.println("Done!");
+    MARK;
 }
 ```
 Running that sketch, we would see the following serial monitor output:
@@ -93,7 +108,7 @@ Since the FeatherFault was triggered by the hard fault, `FeatherFault::PrintFaul
 
 ### Failure Modes
 
-FeatherFault currently handles three failure modes: hanging, [memory overflow](https://learn.adafruit.com/memories-of-an-arduino?view=all), and [hard fault](https://www.freertos.org/Debugging-Hard-Faults-On-Cortex-M-Microcontrollers.html).
+FeatherFault currently handles three failure modes: hanging, [memory overflow](https://learn.adafruit.com/memories-of-an-arduino?view=all), and [hard fault](https://www.freertos.org/Debugging-Hard-Faults-On-Cortex-M-Microcontrollers.html). When any of these failure modes are triggered, FeatherFault will immediately write the information from the last `MARK` to flash memory, and cause a system reset. `FeatherFault::PrintFault`, `FeatherFault::GetFault`, and `FeatherFault::DidFault` read this flash memory to retrieve information regarding the last fault.
 
 #### Hanging Detection
 
