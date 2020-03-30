@@ -6,6 +6,7 @@
 #include <reset.h>
 #include <sam.h>
 #include "ShortFile.h"
+#include <sdios.h> ///< for ArduinoOutStream
 
 /**
  * Welcome to FeatherFault!
@@ -98,6 +99,7 @@ namespace FeatherFault {
      * @param where The print stream to output to (ex. Serial).
      */
     void PrintFault(Print& where);
+    void PrintFault(ofstream& where);
 
     /**
      * Returns whether or not FeatherFault has detected a fault since

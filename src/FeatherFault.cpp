@@ -249,6 +249,29 @@ void FeatherFault::PrintFault(Print& where) {
 }
 
 /* See FeatherFault.h */
+void FeatherFault::PrintFault(ofstream& where) {
+    // Load the fault data from flash
+    const FaultDataFlash_t* trace = (FaultDataFlash_t*)FeatherFaultFlashPtr;
+    // print it the printer
+    if (trace->data.cause != FeatherFault::FAULT_NONE) {
+        where<<"Fault! Cause: ";
+        switch (trace->data.cause) {
+            case FeatherFault::FAULT_HUNG: where<<"HUNG"<<endl; break;
+            case FeatherFault::FAULT_HARDFAULT: where<<"HARDFAULT"<<endl; break;
+            case FeatherFault::FAULT_OUTOFMEMORY: where<<"OUTOFMEMORY"<<endl; break;
+            default: where<<"Corrupted"<<endl;
+        }
+        where<<"Fault during recording: ";
+        where<<(trace->data.is_corrupted ? "Yes" : "No")<<endl;
+        where<<"Line: "<<trace->data.line<<endl;
+        where<<"File: "<<trace->data.file<<endl;
+        where<<"Failures since upload: "<<trace->data.failnum<<endl;
+    }
+    else
+        where<<"No fault"<<endl;
+}
+
+/* See FeatherFault.h */
 bool FeatherFault::DidFault() {
     // Load the fault data from flash
     const FaultDataFlash_t* trace = (FaultDataFlash_t*)FeatherFaultFlashPtr;
