@@ -202,7 +202,7 @@ void FeatherFault::StartWDT(const FeatherFault::WDTTimeout timeout) {
     // Start watchdog now!  
     WDT->CTRL.bit.ENABLE = 1;            
     while(WDT->STATUS.bit.SYNCBUSY);
-    should_feed_watchdog.load(false);
+    should_feed_watchdog.store(false);
 }
 
 
