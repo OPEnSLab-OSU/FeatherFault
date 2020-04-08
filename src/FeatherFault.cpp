@@ -34,6 +34,8 @@ typedef union {
 
 static const uint32_t pageSizes[] = { 8, 16, 32, 64, 128, 256, 512, 1024 };
 
+/** Global atmoic bool to check if the watchdog has been fed, we use a boolean instead of WDT_Reset because watchdog synchronization is slow */
+static volatile std::atomic_bool should_feed_watchdog(false);
 /** Global atomic bool to specify that last_line or last_file are being written to, determines if a fault happened while they were being written */
 static volatile std::atomic_bool is_being_written(false);
 /** Global variable to store the last line MARKed, written by FeatherFault::_Mark and read by FeatherFault::HandleFault */
@@ -146,8 +148,14 @@ static void WDTReset() {
 /** WDT Handler, calls HandleFault(FeatherFault::FAULT_HUNG) */
 [[ noreturn ]] __attribute__ ((interrupt ("IRQ"))) void WDT_Handler() {
     WDT->INTFLAG.bit.EW  = 1;        // Clear interrupt flag
-    // Handle fault!
-    HandleFault(FeatherFault::FAULT_HUNG);
+    // Check if the watchdog has been "fed", if so, reset the watchdog and continue
+    if (should_feed_watchdog.load()){
+        should_feed_watchdog.store(false);
+        WDTReset();
+    }
+    // else there's been a timeout, so fault!
+    else
+        HandleFault(FeatherFault::FAULT_HUNG);
 }
 
 /** HardFault Handler, calls HandleFault(FeatherFault::FAULT_HARDFAULT) */
@@ -194,6 +202,7 @@ void FeatherFault::StartWDT(const FeatherFault::WDTTimeout timeout) {
     // Start watchdog now!  
     WDT->CTRL.bit.ENABLE = 1;            
     while(WDT->STATUS.bit.SYNCBUSY);
+    should_feed_watchdog.load(false);
 }
 
 
@@ -211,7 +220,9 @@ void FeatherFault::SetCallback(volatile void(*callback)()) {
 
 /* See FeatherFault.h */
 void FeatherFault::_Mark(const int line, const char* file) {
-    WDTReset();
+    // feed the watchdog
+    should_feed_watchdog.store(true);
+    // write the last marked data
     is_being_written.store(true);
     last_line = line;
     last_file = file;

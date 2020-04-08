@@ -135,4 +135,4 @@ namespace FeatherFault {
  * This macro is a proxy for FeatherFault::_Mark, allowing it to 
  * grab the line # and filename.
  */
-#define MARK { FeatherFault::_Mark(__LINE__,  __SHORT_FILE__); }
+#define MARK { constexpr const char* const filename = __SHORT_FILE__; FeatherFault::_Mark(__LINE__,  filename); }

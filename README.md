@@ -168,6 +168,8 @@ FeatherFault currently handles three failure modes: hanging, [memory overflow](h
 
 Hanging detection is implemented using the SAMD watchdog timer early warning interrupt. As a result, FeatherFault will not detect hanging unless `FeatherFault::StartWDT` is called somewhere in the beginning of the sketch. Note that similar to normal watchdog operation, FeatherFaults detection must be periodically resetting using `MARK` macro; this means that the `MARK` macro must be placed such that it is called at least periodically under the timeout specified. In long operations that cannot be `MARK`ed (sleep being an example), use `FeatherFault::StopWDT` to disable the watchdog during that time.
 
+Behind the scenes watchdog feeding is implemented in terms of a global atomic boolean which determines if the device should fault during the watchdog interrupt, as opposed to the standard register write found in SleepyDog and other libraries. This decision was made because feeding the WDT on the SAMD21 is [extremely slow (1-5ms)](https://www.avrfreaks.net/forum/c21-watchdog-syncing-too-slow), which is unacceptable for the `MARK` macro (see https://github.com/OPEnSLab-OSU/FeatherFault/issues/4). Note that due to this implementation, the watchdog interrupt happens regularly and may take an extended period of time (1-5ms), causing possible timing issues with other code.
+
 #### Memory Overflow Detection
 
 Memory overflow detection is implemented by checking the top of the heap against the top of the stack. If the stack is overwriting the heap, memory is assumed to be corrupted and the board is immediately reset. This check is performed inside the `MARK` macro.
