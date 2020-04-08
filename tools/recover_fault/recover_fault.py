@@ -28,8 +28,8 @@ import os
 import shutil
 
 # These values are specific to the Adafruit Feather M0 USB configuration
-PID_SKETCH = 0x800b
-PID_BOOTLOADER = (0x000b, 0x0015)
+PID_SKETCH = (0x800b, 0x801B)
+PID_BOOTLOADER = (0x000b, 0x0015, 0x001B)
 VID = 0x239a
 
 # These values indicate where and what FeatherFault trace data is stored in flash
@@ -125,9 +125,14 @@ def reset_board(attempt_count, attempt_wait, force, port):
         # check to see if the board reset
         ports = get_feather_serial_ports(f'^{ port }$')
         if len(ports) == 0:
+            # if forcing, don't find the new port
+            if force == True:
+                click.echo('Board successfully reset!')
+                exit(0)
+            # else attempt to find the new port
             time.sleep(1.0)
             ports = get_feather_serial_ports('.*')
-            bootloader_ports = [port for port, pid in ports if pid == PID_BOOTLOADER]
+            bootloader_ports = [port for port, pid in ports if pid in PID_BOOTLOADER]
             if len(bootloader_ports) != 0:
                 click.echo(f'Board successfully reset! New COM port is { bootloader_ports[0] }')
                 exit(0)
@@ -168,8 +173,7 @@ def recover(force, bossac_path, bin_path, port):
         if len(ports) == 0:
             click.echo(f'Failed to find a device on port "{ port }". Use --force to override this error.', err=True)
             exit(1)
-        if ports[0][1] == PID_SKETCH:
-            
+        if ports[0][1] in PID_SKETCH:
             click.echo('Device is not in bootloader mode. Use --force to override this error.', err=True)
             exit(1)
     # all good! attempt to read the flash, storing the result in a temporary file
