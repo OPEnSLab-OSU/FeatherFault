@@ -6,7 +6,7 @@ When a microcontroller crashes or hangs, it can be quite difficult to troublesho
 
 ## Getting Started
 
-FeatherFault can be installed through the Arduino Library Manager, or by downloading this repository. The Adafruit ASF core is also required, which can be found [here](https://github.com/adafruit/Adafruit_ASFcore). Once these are both installed, FeatherFault can be activated by adding the following lines to the beginning of a sketch:
+FeatherFault can be installed through the Arduino Library Manager, or by downloading this repository. The Adafruit ASF core is also required, which can be found [here](https://github.com/adafruit/Adafruit_ASFcore/tree/f6ffa8b2bc2477566c8406e5f3fa883b137347f1). Once these are both installed, FeatherFault can be activated by adding the following lines to the beginning of a sketch:
 ```C++
 #include "FeatherFault.h"
 
