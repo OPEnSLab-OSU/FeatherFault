@@ -158,6 +158,7 @@ void setup() {
  * The callback must be *extremely careful* when accessing memory outside of itself. All memory should be assumed corrupted unless proven otherwise. Pointers should be treated with extra caution.
  * The callback must execute in less time than the specified WDT timeout, or it will be reset by the watchdog timer.
  * If the callback itself faults, an infinite loop will be triggered.
+
 Because of the above restrictions, it is *highly* recommended that the safe method is used wherever possible.
 
 ## Implementation Notes
