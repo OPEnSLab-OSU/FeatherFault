@@ -28,8 +28,8 @@ struct alignas(uint32_t) FaultDataFlashStruct {
 
 typedef union {
     struct FaultDataFlashStruct data;
-    uint32_t alignas(FaultDataFlashStruct) raw_u32[(sizeof(FaultDataFlashStruct)+3)/4]; // rounded to the nearest 4 bytes
-    uint8_t alignas(FaultDataFlashStruct) raw_u8[sizeof(FaultDataFlashStruct)];
+    alignas(FaultDataFlashStruct) uint32_t raw_u32[(sizeof(FaultDataFlashStruct)+3)/4]; // rounded to the nearest 4 bytes
+    alignas(FaultDataFlashStruct) uint8_t raw_u8[sizeof(FaultDataFlashStruct)];
 } FaultDataFlash_t;
 
 static const uint32_t pageSizes[] = { 8, 16, 32, 64, 128, 256, 512, 1024 };
