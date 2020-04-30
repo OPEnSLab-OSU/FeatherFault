@@ -50,7 +50,7 @@ def get_feather_serial_ports(grep):
     # get the COM port, if the PID matches the sketch or bootloader and the VID is adafruit
     return [ (board.device, board.pid) for board in boards_all
         if board.vid == VID
-        and (board.pid == PID_SKETCH or board.pid in PID_BOOTLOADER)]
+        and (board.pid in PID_SKETCH or board.pid in PID_BOOTLOADER)]
 
 def reset_board_bootloader(address):
     # stolen from http://markparuzel.com/?p=230
