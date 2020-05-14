@@ -114,7 +114,7 @@ namespace FeatherFault {
     FaultData GetFault();
 
     /** Private utility function called by the MARK macro */
-    void _Mark(const int line, const char* file);
+    void mark(const int line = __builtin_LINE(), const char* file = _ShortFilePrivate::past_last_slash(__builtin_FILE()));
 }
 
 /** 
@@ -135,4 +135,4 @@ namespace FeatherFault {
  * This macro is a proxy for FeatherFault::_Mark, allowing it to 
  * grab the line # and filename.
  */
-#define MARK { constexpr const char* const filename = __SHORT_FILE__; FeatherFault::_Mark(__LINE__,  filename); }
+#define MARK { FeatherFault::mark(); }
