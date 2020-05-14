@@ -219,7 +219,7 @@ void FeatherFault::SetCallback(volatile void(*callback)()) {
 }
 
 /* See FeatherFault.h */
-void FeatherFault::_Mark(const int line, const char* file) {
+void FeatherFault::mark(const int line, const char* file) {
     // feed the watchdog
     should_feed_watchdog.store(true);
     // write the last marked data
