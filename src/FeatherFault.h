@@ -132,7 +132,6 @@ namespace FeatherFault {
  * to some global varibles, allowing FeatherFault to determine
  * where the failure happened when the program faults.
  * 
- * This macro is a proxy for FeatherFault::_Mark, allowing it to 
- * grab the line # and filename.
+ * This macro is a proxy for FeatherFault::mark.
  */
 #define MARK { FeatherFault::mark(); }
