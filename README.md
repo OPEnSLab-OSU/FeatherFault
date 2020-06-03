@@ -49,7 +49,6 @@ Once FeatherFault is activated, it will trigger after a set time of inactivity (
 To show how this behavior works, let's assume that `unsafe_function()` in the code block below attempts to access memory that doesn't exist, causing a hard fault:
 ```C++
 void setup() {
-    // Activate featherfault
     // Wait for serial to connect to the serial monitor
     Serial.begin(...);
     while(!Serial);
