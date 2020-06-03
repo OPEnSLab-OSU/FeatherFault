@@ -1,10 +1,14 @@
 #pragma once
 
 #include <Arduino.h>
-#include <atomic>
 #include <Adafruit_ASFcore.h>
 #include <reset.h>
 #include <sam.h>
+#undef Min
+#undef Max
+#undef min
+#undef max
+#include <atomic>
 #include "ShortFile.h"
 
 /**
